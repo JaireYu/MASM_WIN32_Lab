@@ -66,7 +66,7 @@ Judge_Minus:
 	JMP END_LOAD
 Judge_Plus:
 	CMP BYTE PTR [esi], 2BH						
-	JNE CAL										;如果不是正好当作数字计算
+	JNE CAL										;如果不是正号当作数字计算
 	JMP END_LOAD
 CAL:
 	CALL Calculate

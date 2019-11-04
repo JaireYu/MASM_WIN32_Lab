@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/04/19 22:39:27
+Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/04/19 22:47:51
 ..\Exercise3_Sort.asm					     Page 1 - 1
 
 
@@ -104,7 +104,7 @@ Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/04/19 22:39:27
  000000AB  EB 0C			JMP END_LOAD
  000000AD			Judge_Plus:
  000000AD  80 3E 2B			CMP BYTE PTR [esi], 2BH						
- 000000B0  75 02			JNE CAL										;如果不是正好当作数字计算
+ 000000B0  75 02			JNE CAL										;如果不是正号当作数字计算
  000000B2  EB 05			JMP END_LOAD
  000000B4			CAL:
  000000B4  E8 00000087			CALL Calculate
@@ -193,7 +193,7 @@ Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/04/19 22:39:27
  0000015E  C3				RET
  0000015F			SWAP ENDP
 				END main
-Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/04/19 22:39:27
+Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/04/19 22:47:51
 ..\Exercise3_Sort.asm					     Symbols 2 - 1
 
 
