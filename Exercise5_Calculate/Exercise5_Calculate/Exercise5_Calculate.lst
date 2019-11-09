@@ -1,8 +1,7 @@
-Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/06/19 17:45:56
-..\Exercise3_Sort.asm					     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/09/19 19:08:27
+..\Exercise5_Calculate.asm				     Page 1 - 1
 
 
-				;从文件读取[-1024,1024]的少于100个数字，排序之后输出在Console
 				INCLUDE Irvine32.inc
 			      C ; Include file for Irvine32.lib             (Irvine32.inc)
 			      C 
@@ -21,15 +20,18 @@ Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/06/19 17:45:56
 			      C .NOLIST
 			      C .LIST
 			      C 
+				INCLUDE macros.inc
+			      C .NOLIST
+			      C .LIST
+			      C 
 
- = 000001F4			READ_SIZE = 500
- = 00000064			NUM_SIZE = 100
+ = 000001F4			BUFFER_SIZE = 500
 
- 00000000			.data 
- 00000000  000001F4 [		ReadFileBuffer BYTE READ_SIZE DUP(?)
+ 00000000			.data
+ 00000000  000001F4 [		buffer BYTE BUFFER_SIZE DUP(?)
 	    00
 	   ]
- 000001F4 44 3A 5C 47 69	Filename  BYTE "D:\GithubLocalRepo\Asm_MASM_Lab\Exercise3_Sort\Debug\Input3.txt",0
+ 000001F4 44 3A 5C 47 69	filename  BYTE "D:\GithubLocalRepo\Asm_MASM_Lab\Exercise5_Calculate\Debug\Input5.txt",0
 	   74 68 75 62 4C
 	   6F 63 61 6C 52
 	   65 70 6F 5C 41
@@ -37,166 +39,212 @@ Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/06/19 17:45:56
 	   53 4D 5F 4C 61
 	   62 5C 45 78 65
 	   72 63 69 73 65
-	   33 5F 53 6F 72
-	   74 5C 44 65 62
+	   35 5F 43 61 6C
+	   63 75 6C 61 74
+	   65 5C 44 65 62
 	   75 67 5C 49 6E
-	   70 75 74 33 2E
+	   70 75 74 35 2E
 	   74 78 74 00
- 00000234 00000000		ReadBytes DD ? 
- 00000238 00000000		FileHandle  DD ?
- 0000023C 65 72 72 6F 72	ErrorMsg BYTE "error",0
-	   00
- 00000242 00000000		ConsoleOutHandle DD ?
- 00000246 00000000		BytesWritten DD ?
- 0000024A  00000064 [		DataBuffer DD NUM_SIZE DUP(?)
-	    00000000
+ 00000239  000001F4 [		Op BYTE BUFFER_SIZE DUP(?) ;操作符栈
+	    00
 	   ]
- 000003DA 00000000		SortTotal DD ?
- 000003DE 20 00			Space DB " ",0
-
+ 0000042D 00000000		StackBase DD ?
+ 00000431 65 72 72 6F 72	ErrorMsg BYTE "error",0
+	   00
+ 00000437 00000000		ConsoleOutHandle DD ?
+ 0000043B 00000000		BytesWritten DD ?
 
  00000000			.code
  00000000			main PROC
- 00000000  50				PUSH eax	
 					INVOKE CreateFile,
-						ADDR filename, GENERIC_READ, 
-						DO_NOT_SHARE, NULL, 
-						OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0	;调用createfile函数以读模式打开文件
- 0000001D  A3 00000238 R		MOV FileHandle, eax							;保留文件句柄
- 00000022  83 F8 FF			cmp eax, INVALID_HANDLE_VALUE				;比较文件句柄是否合法
- 00000025  74 29			JZ FILE_ERROR								;若不合法，跳转报错
-					INVOKE ReadFile,							;合法读文件
-						fileHandle, OFFSET ReadFileBuffer, READ_SIZE,
-						ADDR ReadBytes, 0
- 00000043  8B 0D 00000234 R		MOV ecx, ReadBytes							;ecx放入字节数
- 00000049  BE 00000000 R		MOV esi, OFFSET ReadFileBuffer				;esi放入首地址
- 0000004E  EB 2F			JMP NO_ERROR
-
- 00000050			FILE_ERROR:
+							ADDR filename, GENERIC_READ, 
+							DO_NOT_SHARE, NULL, 
+							OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0	;调用createfile函数以读模式打开文件
+ 0000001C  BA 00000000 R		MOV edx, OFFSET buffer
+ 00000021  B9 000001F4			MOV ecx, BUFFER_SIZE
+ 00000026  E8 00000000 E		CALL ReadFromFile
+ 0000002B  0F 82 00000178		JC File_ERROR
+ 00000031  8B C8			MOV ecx, eax
+ 00000033  B0 00			MOV al, 0		
+ 00000035  B4 00			MOV ah, 0
+ 00000037  B3 00			MOV bl, 0;读入的byte数移入ecx中
+ 00000039  BF 00000239 R		MOV edi, OFFSET Op
+ 0000003E  BE 0000042D R		MOV esi, OFFSET StackBase		;存储op栈的起始位置
+ 00000043  89 3E			MOV [esi], edi
+ 00000045  BE 00000000 R		MOV esi, OFFSET buffer
+					
+					.WHILE (ecx > 0)
+ 0000004F  8A 3E				MOV bh, BYTE PTR [esi]
+						.IF (bh == 2DH)
+							.IF (ah == 00H)
+								.IF(al == 1 && bl == 1)
+ 00000063  8B D0							MOV edx, eax
+ 00000065  58								POP eax
+ 00000066  51								PUSH ecx
+ 00000067  B9 FFFFFFFF							MOV ecx, -1
+ 0000006C  F7 E1							MUL ecx
+ 0000006E  59								POP ecx
+ 0000006F  50								PUSH eax
+ 00000070  8B C2							MOV eax, edx
+								.ENDIF
+ 00000072  BA 0000042D R					MOV edx, OFFSET StackBase
+ 00000077  8B 12						MOV edx, [edx]
+								.IF(edx != edi)
+ 0000007D  8A 17							MOV dl, [edi]
+									.IF(dl == 2BH);22
+ 00000084  5A									POP edx
+ 00000085  01 14 24								ADD [esp], edx
+ 00000088  4F									DEC edi
+									.ELSEIF(dl == 2DH);30
+ 00000090  5A									POP edx
+ 00000091  29 14 24								SUB [esp], edx
+ 00000094  4F									DEC edi
+									.ENDIF
+								.ENDIF
+ 00000095  47							inc edi
+ 00000096  C6 07 2D						MOV [edi], BYTE PTR 2DH;39
+ 00000099  B4 01						MOV ah, 1
+ 0000009B  B3 00						MOV bl, 0
+ 0000009D  B0 00						MOV al, 0
+							.ELSE 
+ 000000A4  B3 01						MOV bl, 1;45
+ 000000A6  B4 00						MOV ah, 0
+ 000000A8  B0 00						MOV al, 0
+							.ENDIF
+						.ELSEIF (bh == 2BH)
+							.IF (al == 1 && bl == 1)
+ 000000BD  8B D0						MOV edx, eax
+ 000000BF  58							POP eax
+ 000000C0  51							PUSH ecx
+ 000000C1  B9 FFFFFFFF						MOV ecx, -1
+ 000000C6  F7 E1						MUL ecx
+ 000000C8  59							POP ecx
+ 000000C9  50							PUSH eax
+ 000000CA  8B C2						MOV eax, edx
+							.ENDIF
+ 000000CC  BA 0000042D R				MOV edx, OFFSET StackBase
+ 000000D1  8B 12					MOV edx, [edx]
+							.IF(edx != edi);56
+ 000000D7  8A 17						MOV dl, [edi]
+								.IF(dl == 2BH);58
+ 000000DE  5A								POP edx
+ 000000DF  01 14 24							ADD [esp], edx
+ 000000E2  4F								DEC edi
+								.ELSEIF(dl == 2DH);66
+ 000000EA  5A								POP edx
+ 000000EB  29 14 24							SUB [esp], edx
+ 000000EE  4F								DEC edi
+								.ENDIF
+							.ENDIF
+ 000000EF  47						inc edi
+ 000000F0  C6 07 2B					MOV [edi], BYTE PTR 2BH;75
+ 000000F3  B4 01					MOV ah, 1
+ 000000F5  B3 00					MOV bl, 0
+ 000000F7  B0 00					MOV al, 0
+						.ELSEIF (bh == 28H)
+ 00000100  47						INC edi
+ 00000101  C6 07 28					MOV [edi], BYTE PTR 28H
+ 00000104  B3 00					MOV bl, 00H
+ 00000106  B4 01					MOV ah, 01H
+ 00000108  B0 00					MOV al, 0
+						.ELSEIF (bh == 29H);86
+							.IF(al == 1 && bl == 1)
+ 0000011A  8B D0						MOV edx, eax
+ 0000011C  58							POP eax
+ 0000011D  51							PUSH ecx
+ 0000011E  B9 FFFFFFFF						MOV ecx, -1
+ 00000123  F7 E1						MUL ecx
+ 00000125  59							POP ecx
+ 00000126  50							PUSH eax
+ 00000127  8B C2						MOV eax, edx
+							.ENDIF
+							.WHILE 1 LT 2;92
+ 00000129  8A 3F						MOV bh, [edi]
+								.IF (bh == 28H);用bh没有问题
+ 00000130  4F								DEC edi
+									.BREAK
+								.ELSE
+ 00000135  4F								DEC edi
+ 00000136  5A								POP edx
+									.IF(bh == 2BH);104
+ 0000013C  01 14 24								ADD [esp], edx
+									.ELSEIF(bh == 2DH);107
+ 00000146  29 14 24								SUB [esp], edx
+									.ENDIF
+								.ENDIF
+							.ENDW
+						.ELSE
+							.IF(al == 00H)
+ 00000151  0F B6 16						MOVZX edx, BYTE PTR [esi]
+ 00000154  83 EA 30						SUB edx, 30H
+ 00000157  52							PUSH edx
+							.ELSE
+ 0000015A  8B D0						MOV edx, eax
+ 0000015C  58							POP eax
+ 0000015D  51							PUSH ecx
+ 0000015E  B9 0000000A						MOV ecx, 10
+ 00000163  F7 E1						MUL ecx
+ 00000165  59							POP ecx
+ 00000166  02 06						ADD al, BYTE PTR [esi]
+ 00000168  83 E8 30						SUB eax, 30H
+ 0000016B  50							PUSH eax
+ 0000016C  8B C2						MOV eax, edx
+							.ENDIF
+ 0000016E  B0 01					MOV al, 1
+ 00000170  B4 00					MOV ah, 0
+						.ENDIF
+ 00000172  46					inc esi
+ 00000173  49					dec ecx
+					.ENDW
+ 0000017D  BA 0000042D R		MOV edx, OFFSET StackBase
+ 00000182  8B 12			MOV edx, [edx]
+					.WHILE(edi > edx);129
+ 00000186  8A 07				MOV al, [edi]
+ 00000188  5B					POP ebx
+						.IF (al == 2BH);135
+ 0000018D  01 1C 24					ADD [esp], ebx;
+						.ELSE
+ 00000192  29 1C 24					SUB [esp], ebx;
+						.ENDIF
+ 00000195  4F					DEC edi
+					.ENDW
+ 0000019A  8B 04 24			MOV eax, [esp]
+ 0000019D  E8 00000000 E		CALL WriteInt
+					INVOKE ExitProcess, 0
+ 000001A9			FILE_ERROR:
 					INVOKE GetStdHandle, STD_OUTPUT_HANDLE 
- 00000057  A3 00000242 R	    MOV ConsoleOutHandle, eax 
- 0000005C  60			    PUSHAD  
+ 000001B0  A3 00000437 R	    MOV ConsoleOutHandle, eax 
+ 000001B5  60			    PUSHAD  
 				    INVOKE WriteConsole, ConsoleOutHandle,		;打印报错信息
 							Offset ErrorMsg, SIZEOF ErrorMsg, 
 							offset BytesWritten, 0
- 00000076  61				POPAD
- 00000077  5A				POP edx
+ 000001CF  61				POPAD
+ 000001D0  58				POP eax
 					INVOKE ExitProcess, 0
-
-				;读文件没有错误准备加载数字到数组
- 0000007F			NO_ERROR:
- 0000007F  BB 00000000			MOV ebx, 0									;起始数字是0
- 00000084  BA 00000000			MOV edx, 0									;默认正数
- 00000089  BF 000003DA R		MOV edi, OFFSET SortTotal
- 0000008E  89 1F			MOV [edi], ebx								;数字计数置零
- 00000090  BF 0000024A R		MOV edi, OFFSET DataBuffer					;数组位置
-					
-				;字符转数字进入数组
- 00000095			LOAD_NUM:										;循环置数
- 00000095  80 3E 20			CMP BYTE PTR [esi], 20H
- 00000098  75 07			JNE Judge_Minus								;如果不是空格,去判断符号
- 0000009A  E8 0000007E			CALL Load_To_Buffer							;否则print到buffer
- 0000009F  EB 18			JMP END_LOAD
- 000000A1			Judge_Minus:
- 000000A1  80 3E 2D			CMP BYTE PTR [esi], 2DH
- 000000A4  75 07			JNE Judge_Plus								;如果不是负号, 去判断正号
- 000000A6  BA 00000001			MOV edx, 1									;否则将标志位修改为负
- 000000AB  EB 0C			JMP END_LOAD
- 000000AD			Judge_Plus:
- 000000AD  80 3E 2B			CMP BYTE PTR [esi], 2BH						
- 000000B0  75 02			JNE CAL										;如果不是正号当作数字计算
- 000000B2  EB 05			JMP END_LOAD
- 000000B4			CAL:
- 000000B4  E8 00000087			CALL Calculate
- 000000B9			END_LOAD:
- 000000B9  46				INC esi
- 000000BA  E2 D9			LOOP LOAD_NUM
- 000000BC  E8 0000005C			CALL Load_To_Buffer
-
-				;BubbleSort
- 000000C1  B9 000003DA R		MOV ecx, OFFSET SortTotal
- 000000C6  8B 09			MOV ecx, [ecx]
- 000000C8  83 E9 01			SUB ecx, 1
- 000000CB  BE 0000024A R		MOV esi, OFFSET DataBuffer
- 000000D0			OUTLOOP:										;外层循环记录趟数，11个数就是10趟，前面已经减过1了
- 000000D0  51				PUSH ecx									;保护外层循环趟数
- 000000D1  56				PUSH esi
- 000000D2			INLOOP:											;相邻两个L>=R, 就交换
- 000000D2  8B 7E 04			MOV edi, [esi + 4]
- 000000D5  39 3E			CMP [esi], edi
- 000000D7  78 05			JS SKIP										;注意这里应该使用JS(SF)，因为若使用JB为CF标志位，CF针对无符号
- 000000D9  E8 00000076			CALL Swap
- 000000DE			SKIP:
- 000000DE  83 C6 04			ADD esi, TYPE DataBuffer
- 000000E1  E2 EF			LOOP INLOOP
- 000000E3  5E				POP esi										;恢复首位置
- 000000E4  59				POP ecx										;恢复外循环数
- 000000E5  E2 E9			LOOP OUTLOOP
-
-				;print
- 000000E7  BE 0000024A R		MOV esi, OFFSET DataBuffer
- 000000EC  B9 000003DA R		MOV ecx, OFFSET SortTotal
- 000000F1  8B 09			MOV ecx, [ecx]
- 000000F3			PRINT:
- 000000F3  8B 06			MOV eax, [esi]
- 000000F5  83 C0 00			ADD eax, 0
- 000000F8  79 0B			JNS PRINT_PLUS								;如果是正数，直接打印正数
- 000000FA  50				PUSH eax									;是负数先打印"-", 再将eax取反得到正数
- 000000FB  B0 2D			MOV al, 2DH
- 000000FD  E8 00000000 E		CALL WriteChar
- 00000102  58				POP eax
- 00000103  F7 D8			NEG eax
- 00000105			PRINT_PLUS:
- 00000105  E8 00000000 E		CALL WriteDec
- 0000010A  83 C6 04			ADD esi, TYPE DataBuffer					;数组下标增1
- 0000010D  B0 20			MOV al, 20H									;打印空格
- 0000010F  E8 00000000 E		CALL WriteChar
- 00000114  E2 DD			LOOP PRINT
-					INVOKE ExitProcess,0
- 0000011D			main ENDP
-
-				;将ebx的数据存入buffer，考虑标志位(符号)
- 0000011D			Load_To_Buffer proc								
- 0000011D  83 FA 00			CMP edx, 0
- 00000120  74 02			JE Load										;如果是正数，就直接LOAD
- 00000122  F7 DB			NEG ebx										;负数取反
- 00000124			Load:
- 00000124  89 1F			MOV [edi], ebx								;ebx数据送入数组 
- 00000126  83 C7 04			ADD edi, TYPE DataBuffer
- 00000129  BB 000003DA R		MOV ebx, OFFSET SortTotal
- 0000012E  BA 00000001			MOV edx, 1 									
- 00000133  01 13			ADD [ebx], edx								;数字计数++
- 00000135  BB 00000000			MOV ebx, 0									;重置起始数字是0
- 0000013A  BA 00000000			MOV edx, 0									;默认正数 
- 0000013F  C3				RET
- 00000140			Load_To_Buffer ENDP
-
-				;ebx <- ebx*10 + [esi]
- 00000140			Calculate proc
- 00000140  52				PUSH edx									;edx存储的是符号位，如果不如栈会被乘积高位覆盖！！！
- 00000141  F7 E3			MUL ebx
- 00000143  8B D8			MOV ebx, eax
- 00000145  0F B6 06			MOVZX eax, BYTE PTR [esi] 
- 00000148  03 D8			ADD ebx, eax
- 0000014A  83 EB 30			SUB ebx, 30H
- 0000014D  B8 0000000A			MOV eax, 10
- 00000152  5A				POP edx
- 00000153  C3				RET
- 00000154			Calculate ENDP
-
-				;swap [esi], [esi + 4]
- 00000154			Swap proc
- 00000154  8B 06			MOV eax, [esi]
- 00000156  8B 5E 04			MOV ebx, [esi + 4]
- 00000159  89 1E			MOV [esi], ebx
- 0000015B  89 46 04			MOV [esi + 4], eax
- 0000015E  C3				RET
- 0000015F			SWAP ENDP
+ 000001D8			main ENDP
 				END main
-Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/06/19 17:45:56
-..\Exercise3_Sort.asm					     Symbols 2 - 1
+Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/09/19 19:08:27
+..\Exercise5_Calculate.asm				     Symbols 2 - 1
 
 
+
+
+Macros:
+
+                N a m e                 Type
+
+IsDefined  . . . . . . . . . . .	Func
+Startup  . . . . . . . . . . . .	Proc
+mDumpMem . . . . . . . . . . . .	Proc
+mDump  . . . . . . . . . . . . .	Proc
+mGotoxy  . . . . . . . . . . . .	Proc
+mReadString  . . . . . . . . . .	Proc
+mShowRegister  . . . . . . . . .	Proc
+mShow  . . . . . . . . . . . . .	Proc
+mWriteLn . . . . . . . . . . . .	Proc
+mWriteSpace  . . . . . . . . . .	Proc
+mWriteString . . . . . . . . . .	Proc
+mWrite . . . . . . . . . . . . .	Proc
 
 
 Structures and Unions:
@@ -287,15 +335,14 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 000003E0 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000015F Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000043F Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000001D8 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-Calculate  . . . . . . . . . . .	P Near	 00000140 _TEXT	Length= 00000014 Public STDCALL
 CloseFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 CloseHandle  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Clrscr . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -336,8 +383,6 @@ HeapDestroy  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 HeapFree . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 HeapSize . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-Load_To_Buffer . . . . . . . . .	P Near	 0000011D _TEXT	Length= 00000023 Public STDCALL
-  Load . . . . . . . . . . . . .	L Near	 00000124 _TEXT	
 LocalFree  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MessageBoxA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 MsgBoxAsk  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -379,7 +424,6 @@ Str_copy . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 Str_length . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Str_trim . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Str_ucase  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-Swap . . . . . . . . . . . . . .	P Near	 00000154 _TEXT	Length= 0000000B Public STDCALL
 SystemTimeToFileTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WaitMsg  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteBinB  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -399,19 +443,8 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000011D Public STDCALL
-  FILE_ERROR . . . . . . . . . .	L Near	 00000050 _TEXT	
-  NO_ERROR . . . . . . . . . . .	L Near	 0000007F _TEXT	
-  LOAD_NUM . . . . . . . . . . .	L Near	 00000095 _TEXT	
-  Judge_Minus  . . . . . . . . .	L Near	 000000A1 _TEXT	
-  Judge_Plus . . . . . . . . . .	L Near	 000000AD _TEXT	
-  CAL  . . . . . . . . . . . . .	L Near	 000000B4 _TEXT	
-  END_LOAD . . . . . . . . . . .	L Near	 000000B9 _TEXT	
-  OUTLOOP  . . . . . . . . . . .	L Near	 000000D0 _TEXT	
-  INLOOP . . . . . . . . . . . .	L Near	 000000D2 _TEXT	
-  SKIP . . . . . . . . . . . . .	L Near	 000000DE _TEXT	
-  PRINT  . . . . . . . . . . . .	L Near	 000000F3 _TEXT	
-  PRINT_PLUS . . . . . . . . . .	L Near	 00000105 _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000001D8 Public STDCALL
+  FILE_ERROR . . . . . . . . . .	L Near	 000001A9 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -431,15 +464,15 @@ Symbols:
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
 ALT_MASK . . . . . . . . . . . .	Number	 00000003h   
-BytesWritten . . . . . . . . . .	DWord	 00000246 _DATA	
+BUFFER_SIZE  . . . . . . . . . .	Number	 000001F4h   
+BytesWritten . . . . . . . . . .	DWord	 0000043B _DATA	
 CAPSLOCK_ON  . . . . . . . . . .	Number	 00000080h   
 CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
 CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
 CTRL_MASK  . . . . . . . . . . .	Number	 0000000Ch   
-ConsoleOutHandle . . . . . . . .	DWord	 00000242 _DATA	
+ConsoleOutHandle . . . . . . . .	DWord	 00000437 _DATA	
 CreateFile . . . . . . . . . . .	Text   	 CreateFileA
 DO_NOT_SHARE . . . . . . . . . .	Number	 00000000h   
-DataBuffer . . . . . . . . . . .	DWord	 0000024A _DATA	
 ENABLE_ECHO_INPUT  . . . . . . .	Number	 00000004h   
 ENABLE_LINE_INPUT  . . . . . . .	Number	 00000002h   
 ENABLE_MOUSE_INPUT . . . . . . .	Number	 00000010h   
@@ -448,7 +481,7 @@ ENABLE_PROCESSED_OUTPUT  . . . .	Number	 00000001h
 ENABLE_WINDOW_INPUT  . . . . . .	Number	 00000008h   
 ENABLE_WRAP_AT_EOL_OUTPUT  . . .	Number	 00000002h   
 ENHANCED_KEY . . . . . . . . . .	Number	 00000100h   
-ErrorMsg . . . . . . . . . . . .	Byte	 0000023C _DATA	
+ErrorMsg . . . . . . . . . . . .	Byte	 00000431 _DATA	
 FALSE  . . . . . . . . . . . . .	Number	 00000000h   
 FILE_APPEND_DATA . . . . . . . .	Number	 00000004h   
 FILE_ATTRIBUTE_ARCHIVE . . . . .	Number	 00000020h   
@@ -477,8 +510,6 @@ FILE_WRITE_DATA  . . . . . . . .	Number	 00000002h
 FOCUS_EVENT  . . . . . . . . . .	Number	 00000010h   
 FORMAT_MESSAGE_ALLOCATE_BUFFER .	Number	 00000100h   
 FORMAT_MESSAGE_FROM_SYSTEM . . .	Number	 00001000h   
-FileHandle . . . . . . . . . . .	DWord	 00000238 _DATA	
-Filename . . . . . . . . . . . .	Byte	 000001F4 _DATA	
 FormatMessage  . . . . . . . . .	Text   	 FormatMessageA
 GENERIC_ALL  . . . . . . . . . .	Number	 10000000h   
 GENERIC_EXECUTE  . . . . . . . .	Number	 20000000h   
@@ -538,17 +569,14 @@ MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h
 MessageBox . . . . . . . . . . .	Text   	 MessageBoxA
 NULL . . . . . . . . . . . . . .	Number	 00000000h   
 NUMLOCK_ON . . . . . . . . . . .	Number	 00000020h   
-NUM_SIZE . . . . . . . . . . . .	Number	 00000064h   
 OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
 OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
+Op . . . . . . . . . . . . . . .	Byte	 00000239 _DATA	
 PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
-READ_SIZE  . . . . . . . . . . .	Number	 000001F4h   
 RIGHT_ALT_PRESSED  . . . . . . .	Number	 00000001h   
 RIGHT_CTRL_PRESSED . . . . . . .	Number	 00000004h   
-ReadBytes  . . . . . . . . . . .	DWord	 00000234 _DATA	
 ReadConsoleInput . . . . . . . .	Text   	 ReadConsoleInputA
 ReadConsole  . . . . . . . . . .	Text   	 ReadConsoleA
-ReadFileBuffer . . . . . . . . .	Byte	 00000000 _DATA	
 SCROLLLOCK_ON  . . . . . . . . .	Number	 00000040h   
 SHIFT_MASK . . . . . . . . . . .	Number	 00000010h   
 SHIFT_PRESSED  . . . . . . . . .	Number	 00000010h   
@@ -556,8 +584,7 @@ STD_ERROR_HANDLE . . . . . . . .	Number	 -0000000Ch
 STD_INPUT_HANDLE . . . . . . . .	Number	 -0000000Ah   
 STD_OUTPUT_HANDLE  . . . . . . .	Number	 -0000000Bh   
 SetConsoleTitle  . . . . . . . .	Text   	 SetConsoleTitleA
-SortTotal  . . . . . . . . . . .	DWord	 000003DA _DATA	
-Space  . . . . . . . . . . . . .	Byte	 000003DE _DATA	
+StackBase  . . . . . . . . . . .	DWord	 0000042D _DATA	
 TAB  . . . . . . . . . . . . . .	Number	 00000009h   
 TRUE . . . . . . . . . . . . . .	Number	 00000001h   
 TRUNCATE_EXISTING  . . . . . . .	Number	 00000005h   
@@ -645,8 +672,10 @@ WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
+buffer . . . . . . . . . . . . .	Byte	 00000000 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+filename . . . . . . . . . . . .	Byte	 000001F4 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
