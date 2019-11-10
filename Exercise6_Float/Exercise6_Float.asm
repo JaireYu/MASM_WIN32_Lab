@@ -73,7 +73,7 @@ FourTime:
 main ENDP
 
 DealError PROC
-	mWrite "Error"
+	mWrite "Error: x<0"
 	INVOKE ExitProcess, 0
 DealError ENDP
 
