@@ -8,6 +8,7 @@ BUFFER_SIZE = 500
 .data
 buffer BYTE BUFFER_SIZE DUP(?)
 filename  BYTE "D:\GithubLocalRepo\Asm_MASM_Lab\Exercise1_IO\Debug\Input1.txt",0
+outfilename BYTE "D:\GithubLocalRepo\Asm_MASM_Lab\Exercise1_IO\Debug\Output1.txt",0
 fileHandle  DD ?
 ErrorMsg BYTE "error",0
 ALREADYREAD DD ?
@@ -45,6 +46,14 @@ WRITEBACK:
 			ADDR buffer, ALREADYREAD, 
 			offset BytesWritten, 0
 	POPAD
+	MOV edx, OFFSET outfilename
+	INVOKE CreateFile,
+	  edx, GENERIC_WRITE, DO_NOT_SHARE, NULL,
+	  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0
+	MOV fileHandle, eax
+	INVOKE WriteFile,							;合法读文件
+		fileHandle, OFFSET buffer, BUFFER_SIZE,
+		ADDR ALREADYREAD, 0
 	JMP SUCCESS
 FILE_ERROR:
 	INVOKE GetStdHandle, STD_OUTPUT_HANDLE 

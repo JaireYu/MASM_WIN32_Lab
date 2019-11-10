@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/03/19 17:27:51
+Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/10/19 11:18:46
 ..\IO.asm						     Page 1 - 1
 
 
@@ -46,12 +46,25 @@ Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/03/19 17:27:51
 	   5C 49 6E 70 75
 	   74 31 2E 74 78
 	   74 00
- 00000232 00000000		fileHandle  DD ?
- 00000236 65 72 72 6F 72	ErrorMsg BYTE "error",0
+ 00000232 44 3A 5C 47 69	outfilename BYTE "D:\GithubLocalRepo\Asm_MASM_Lab\Exercise1_IO\Debug\Output1.txt",0
+	   74 68 75 62 4C
+	   6F 63 61 6C 52
+	   65 70 6F 5C 41
+	   73 6D 5F 4D 41
+	   53 4D 5F 4C 61
+	   62 5C 45 78 65
+	   72 63 69 73 65
+	   31 5F 49 4F 5C
+	   44 65 62 75 67
+	   5C 4F 75 74 70
+	   75 74 31 2E 74
+	   78 74 00
+ 00000271 00000000		fileHandle  DD ?
+ 00000275 65 72 72 6F 72	ErrorMsg BYTE "error",0
 	   00
- 0000023C 00000000		ALREADYREAD DD ?
- 00000240 00000000		ConsoleOutHandle DD ?
- 00000244 00000000		BytesWritten DD ?
+ 0000027B 00000000		ALREADYREAD DD ?
+ 0000027F 00000000		ConsoleOutHandle DD ?
+ 00000283 00000000		BytesWritten DD ?
 
  00000000			.code
  00000000			main PROC
@@ -60,47 +73,55 @@ Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/03/19 17:27:51
 						ADDR filename, GENERIC_READ, 
 						DO_NOT_SHARE, NULL, 
 						OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0	;调用createfile函数以读模式打开文件
- 0000001D  A3 00000232 R		MOV fileHandle, eax							;保留文件句柄
+ 0000001D  A3 00000271 R		MOV fileHandle, eax							;保留文件句柄
  00000022  83 F8 FF			cmp eax, INVALID_HANDLE_VALUE				;比较文件句柄是否合法
- 00000025  74 65			JZ FILE_ERROR								;若不合法，跳转报错
+ 00000025  0F 84 000000A3		JZ FILE_ERROR								;若不合法，跳转报错
 					INVOKE ReadFile,							;合法读文件
 						fileHandle, OFFSET buffer, BUFFER_SIZE,
 						ADDR ALREADYREAD, 0
- 00000043  8B 0D 0000023C R		MOV ecx, ALREADYREAD						;ecx放入字节数
- 00000049  BE 00000000 R		MOV esi, OFFSET buffer						;esi放入首地址
- 0000004E			CHANGE: 
- 0000004E  8A 1E			MOV bl, [esi]								;循环读取buffer
- 00000050  80 FB 60			cmp bl, 60H
- 00000053  72 05			JB WRITEBACK
- 00000055  80 EB 20			sub bl, 20H									;如果是小写就-20H
- 00000058  88 1E			MOV [esi], bl								;写回buffer
- 0000005A			WRITEBACK:							
- 0000005A  83 C6 01			ADD esi, TYPE buffer						;i++
- 0000005D  E2 EF			LOOP CHANGE									;循环结束
+ 00000047  8B 0D 0000027B R		MOV ecx, ALREADYREAD						;ecx放入字节数
+ 0000004D  BE 00000000 R		MOV esi, OFFSET buffer						;esi放入首地址
+ 00000052			CHANGE: 
+ 00000052  8A 1E			MOV bl, [esi]								;循环读取buffer
+ 00000054  80 FB 60			cmp bl, 60H
+ 00000057  72 05			JB WRITEBACK
+ 00000059  80 EB 20			sub bl, 20H									;如果是小写就-20H
+ 0000005C  88 1E			MOV [esi], bl								;写回buffer
+ 0000005E			WRITEBACK:							
+ 0000005E  83 C6 01			ADD esi, TYPE buffer						;i++
+ 00000061  E2 EF			LOOP CHANGE									;循环结束
 					INVOKE GetStdHandle, STD_OUTPUT_HANDLE		;获取控制台指针
- 00000066  A3 00000240 R	    MOV ConsoleOutHandle, eax 
- 0000006B  60			    PUSHAD										;储存存储器值
+ 0000006A  A3 0000027F R	    MOV ConsoleOutHandle, eax 
+ 0000006F  60			    PUSHAD										;储存存储器值
 				    INVOKE WriteConsole, ConsoleOutHandle,		;打印buffer
 							ADDR buffer, ALREADYREAD, 
 							offset BytesWritten, 0
- 00000089  61				POPAD
- 0000008A  EB 2F			JMP SUCCESS
- 0000008C			FILE_ERROR:
+ 0000008D  61				POPAD
+ 0000008E  BA 00000232 R		MOV edx, OFFSET outfilename
+					INVOKE CreateFile,
+					  edx, GENERIC_WRITE, DO_NOT_SHARE, NULL,
+					  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0
+ 000000AB  A3 00000271 R		MOV fileHandle, eax
+					INVOKE WriteFile,							;合法读文件
+						fileHandle, OFFSET buffer, BUFFER_SIZE,
+						ADDR ALREADYREAD, 0
+ 000000CC  EB 2F			JMP SUCCESS
+ 000000CE			FILE_ERROR:
 					INVOKE GetStdHandle, STD_OUTPUT_HANDLE 
- 00000093  A3 00000240 R	    MOV ConsoleOutHandle, eax 
- 00000098  60			    PUSHAD  
+ 000000D5  A3 0000027F R	    MOV ConsoleOutHandle, eax 
+ 000000DA  60			    PUSHAD  
 				    INVOKE WriteConsole, ConsoleOutHandle,		;打印报错信息
 							Offset ErrorMsg, SIZEOF ErrorMsg, 
 							offset BytesWritten, 0
- 000000B2  61				POPAD
- 000000B3  58				POP eax
+ 000000F4  61				POPAD
+ 000000F5  58				POP eax
 					INVOKE ExitProcess, 0
- 000000BB			SUCCESS:
- 000000BB  58				POP eax
+ 000000FD			SUCCESS:
+ 000000FD  58				POP eax
 					INVOKE ExitProcess, 0
- 000000C3			main ENDP
+ 00000105			main ENDP
 				END main
-Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/03/19 17:27:51
+Microsoft (R) Macro Assembler Version 14.16.27025.1	    11/10/19 11:18:46
 ..\IO.asm						     Symbols 2 - 1
 
 
@@ -212,8 +233,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000248 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 000000C3 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000287 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000105 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -320,11 +341,11 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000C3 Public STDCALL
-  CHANGE . . . . . . . . . . . .	L Near	 0000004E _TEXT	
-  WRITEBACK  . . . . . . . . . .	L Near	 0000005A _TEXT	
-  FILE_ERROR . . . . . . . . . .	L Near	 0000008C _TEXT	
-  SUCCESS  . . . . . . . . . . .	L Near	 000000BB _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000105 Public STDCALL
+  CHANGE . . . . . . . . . . . .	L Near	 00000052 _TEXT	
+  WRITEBACK  . . . . . . . . . .	L Near	 0000005E _TEXT	
+  FILE_ERROR . . . . . . . . . .	L Near	 000000CE _TEXT	
+  SUCCESS  . . . . . . . . . . .	L Near	 000000FD _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -343,15 +364,15 @@ Symbols:
 @fardata?  . . . . . . . . . . .	Text   	 FLAT
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
-ALREADYREAD  . . . . . . . . . .	DWord	 0000023C _DATA	
+ALREADYREAD  . . . . . . . . . .	DWord	 0000027B _DATA	
 ALT_MASK . . . . . . . . . . . .	Number	 00000003h   
 BUFFER_SIZE  . . . . . . . . . .	Number	 000001F4h   
-BytesWritten . . . . . . . . . .	DWord	 00000244 _DATA	
+BytesWritten . . . . . . . . . .	DWord	 00000283 _DATA	
 CAPSLOCK_ON  . . . . . . . . . .	Number	 00000080h   
 CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
 CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
 CTRL_MASK  . . . . . . . . . . .	Number	 0000000Ch   
-ConsoleOutHandle . . . . . . . .	DWord	 00000240 _DATA	
+ConsoleOutHandle . . . . . . . .	DWord	 0000027F _DATA	
 CreateFile . . . . . . . . . . .	Text   	 CreateFileA
 DO_NOT_SHARE . . . . . . . . . .	Number	 00000000h   
 ENABLE_ECHO_INPUT  . . . . . . .	Number	 00000004h   
@@ -362,7 +383,7 @@ ENABLE_PROCESSED_OUTPUT  . . . .	Number	 00000001h
 ENABLE_WINDOW_INPUT  . . . . . .	Number	 00000008h   
 ENABLE_WRAP_AT_EOL_OUTPUT  . . .	Number	 00000002h   
 ENHANCED_KEY . . . . . . . . . .	Number	 00000100h   
-ErrorMsg . . . . . . . . . . . .	Byte	 00000236 _DATA	
+ErrorMsg . . . . . . . . . . . .	Byte	 00000275 _DATA	
 FALSE  . . . . . . . . . . . . .	Number	 00000000h   
 FILE_APPEND_DATA . . . . . . . .	Number	 00000004h   
 FILE_ATTRIBUTE_ARCHIVE . . . . .	Number	 00000020h   
@@ -554,7 +575,7 @@ brown  . . . . . . . . . . . . .	Number	 00000006h
 buffer . . . . . . . . . . . . .	Byte	 00000000 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-fileHandle . . . . . . . . . . .	DWord	 00000232 _DATA	
+fileHandle . . . . . . . . . . .	DWord	 00000271 _DATA	
 filename . . . . . . . . . . . .	Byte	 000001F4 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
@@ -565,6 +586,7 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
+outfilename  . . . . . . . . . .	Byte	 00000232 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
