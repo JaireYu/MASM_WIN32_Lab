@@ -1,3 +1,4 @@
+;仿照文件夹下的Cpp程序来写，参照Cpp注释
 INCLUDE Irvine32.inc
 INCLUDE macros.inc
 
